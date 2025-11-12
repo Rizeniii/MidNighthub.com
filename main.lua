@@ -752,6 +752,16 @@ registerModule(4, function()
             Parent = Container
         })
         
+        local ClickEffect = Creator.New("Frame", {
+            Size = UDim2.fromScale(1, 1),
+            BackgroundColor3 = Theme.Accent,
+            BackgroundTransparency = 1,
+            ZIndex = 2,
+            Parent = Container
+        }, {
+            Creator.New("UICorner", {CornerRadius = UDim.new(0, 10)})
+        })
+        
         local IconImg
         if config.Icon and config.IconPosition == "before" then
             IconImg = Creator.New("ImageLabel", {
@@ -809,6 +819,16 @@ registerModule(4, function()
             Creator.TweenObject(Container, TweenInfo.new(0.3), {BackgroundTransparency = 0.3}):Play()
         end)
         
+        Creator.AddSignal(Button.MouseButton1Down, function()
+            if not button.Enabled then return end
+            Creator.TweenObject(ClickEffect, TweenInfo.new(0.2), {BackgroundTransparency = 0.8}):Play()
+        end)
+        
+        Creator.AddSignal(Button.MouseButton1Up, function()
+            if not button.Enabled then return end
+            Creator.TweenObject(ClickEffect, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
+        end)
+        
         Creator.AddSignal(Button.MouseButton1Click, function()
             if not button.Enabled then return end
             
@@ -821,6 +841,7 @@ registerModule(4, function()
         
         ThemeManager:OnThemeChange(function(newTheme)
             Icon.ImageColor3 = newTheme.Text
+            ClickEffect.BackgroundColor3 = newTheme.Accent
             if IconImg then
                 IconImg.ImageColor3 = newTheme.Text
             end
@@ -1083,14 +1104,23 @@ registerModule(4, function()
             Parent = Container
         })
         
+        local OptionsContainer = Creator.New("Frame", {
+            Size = UDim2.fromScale(1, 1),
+            Position = UDim2.fromScale(0, 0),
+            BackgroundTransparency = 1,
+            Visible = false,
+            ZIndex = 10000,
+            Parent = parent.Parent.Parent.Parent
+        })
+        
         local OptionsFrame = Creator.New("Frame", {
-            Size = UDim2.new(1, 0, 0, 0),
-            Position = UDim2.new(0, 0, 1, 5),
+            Size = UDim2.new(0, Container.AbsoluteSize.X, 0, 0),
+            Position = UDim2.new(0, Container.AbsolutePosition.X, 0, Container.AbsolutePosition.Y + Container.AbsoluteSize.Y + 5),
             BackgroundColor3 = Theme.Surface,
             ClipsDescendants = true,
             Visible = false,
-            ZIndex = 300,
-            Parent = Container
+            ZIndex = 10001,
+            Parent = OptionsContainer
         }, {
             Creator.New("UICorner", {CornerRadius = UDim.new(0, 10)}),
             Creator.New("UIStroke", {Color = Theme.Border, Thickness = 1})
@@ -1102,7 +1132,7 @@ registerModule(4, function()
             ScrollBarThickness = 4,
             ScrollBarImageColor3 = Theme.Accent,
             CanvasSize = UDim2.new(0, 0, 0, 0),
-            ZIndex = 301,
+            ZIndex = 10002,
             Parent = OptionsFrame
         }, {
             Creator.New("UIListLayout", {Padding = UDim.new(0, 2), SortOrder = Enum.SortOrder.LayoutOrder}),
@@ -1110,6 +1140,15 @@ registerModule(4, function()
         })
         
         local OptionsLayout = OptionsScroll:FindFirstChildOfClass("UIListLayout")
+        
+        local clickDebounce = false
+        
+        function dropdown:UpdatePosition()
+            if OptionsFrame.Visible then
+                OptionsFrame.Size = UDim2.new(0, Container.AbsoluteSize.X, 0, OptionsFrame.Size.Y.Offset)
+                OptionsFrame.Position = UDim2.new(0, Container.AbsolutePosition.X, 0, Container.AbsolutePosition.Y + Container.AbsoluteSize.Y + 5)
+            end
+        end
         
         function dropdown:SetValue(value, silent)
             if not dropdown.Enabled then return end
@@ -1155,11 +1194,21 @@ registerModule(4, function()
                     Font = Enum.Font.Gotham,
                     TextSize = 13,
                     TextXAlignment = Enum.TextXAlignment.Left,
-                    ZIndex = 302,
+                    ZIndex = 10003,
                     Parent = OptionsScroll
                 }, {
                     Creator.New("UICorner", {CornerRadius = UDim.new(0, 6)}),
                     Creator.New("UIPadding", {PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10)})
+                })
+                
+                local OptionClickEffect = Creator.New("Frame", {
+                    Size = UDim2.fromScale(1, 1),
+                    BackgroundColor3 = Theme.Accent,
+                    BackgroundTransparency = 1,
+                    ZIndex = 10002,
+                    Parent = OptionButton
+                }, {
+                    Creator.New("UICorner", {CornerRadius = UDim.new(0, 6)})
                 })
                 
                 Creator.AddSignal(OptionButton.MouseEnter, function()
@@ -1168,6 +1217,14 @@ registerModule(4, function()
                 
                 Creator.AddSignal(OptionButton.MouseLeave, function()
                     Creator.TweenObject(OptionButton, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
+                end)
+                
+                Creator.AddSignal(OptionButton.MouseButton1Down, function()
+                    Creator.TweenObject(OptionClickEffect, TweenInfo.new(0.1), {BackgroundTransparency = 0.7}):Play()
+                end)
+                
+                Creator.AddSignal(OptionButton.MouseButton1Up, function()
+                    Creator.TweenObject(OptionClickEffect, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
                 end)
                 
                 Creator.AddSignal(OptionButton.MouseButton1Click, function()
@@ -1183,30 +1240,45 @@ registerModule(4, function()
         end
         
         function dropdown:Open()
-            if not dropdown.Enabled or dropdown.IsOpen then return end
+            if not dropdown.Enabled or dropdown.IsOpen or clickDebounce then return end
+            clickDebounce = true
             
             dropdown.IsOpen = true
             local optionCount = #config.Options
             local totalHeight = math.min(optionCount * 37 + 10, 200)
             
+            OptionsContainer.Visible = true
             OptionsFrame.Visible = true
+            dropdown:UpdatePosition()
             
-            Creator.TweenObject(OptionsFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, totalHeight)}):Play()
+            Creator.TweenObject(OptionsFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                Size = UDim2.new(0, Container.AbsoluteSize.X, 0, totalHeight)
+            }):Play()
             Creator.TweenObject(ChevronIcon, TweenInfo.new(0.3), {Rotation = 180}):Play()
+            
+            task.wait(0.1)
+            clickDebounce = false
         end
         
         function dropdown:Close()
-            if not dropdown.IsOpen then return end
+            if not dropdown.IsOpen or clickDebounce then return end
+            clickDebounce = true
             
             dropdown.IsOpen = false
-            Creator.TweenObject(OptionsFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, 0)}):Play()
+            Creator.TweenObject(OptionsFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                Size = UDim2.new(0, Container.AbsoluteSize.X, 0, 0)
+            }):Play()
             Creator.TweenObject(ChevronIcon, TweenInfo.new(0.3), {Rotation = 0}):Play()
             
             task.delay(0.3, function()
                 if not dropdown.IsOpen then
                     OptionsFrame.Visible = false
+                    OptionsContainer.Visible = false
                 end
             end)
+            
+            task.wait(0.1)
+            clickDebounce = false
         end
         
         function dropdown:Toggle()
@@ -1218,12 +1290,26 @@ registerModule(4, function()
         end
         
         Creator.AddSignal(Button.MouseButton1Click, function()
-            if not dropdown.Enabled then return end
+            if not dropdown.Enabled or clickDebounce then return end
             dropdown:Toggle()
+        end)
+        
+        Creator.AddSignal(Button.InputBegan, function(input)
+            if input.UserInputType == Enum.UserInputType.Touch and not clickDebounce and dropdown.Enabled then
+                dropdown:Toggle()
+            end
         end)
         
         Creator.AddSignal(OptionsLayout:GetPropertyChangedSignal("AbsoluteContentSize"), function()
             OptionsScroll.CanvasSize = UDim2.new(0, 0, 0, OptionsLayout.AbsoluteContentSize.Y + 10)
+        end)
+        
+        Creator.AddSignal(Container:GetPropertyChangedSignal("AbsolutePosition"), function()
+            dropdown:UpdatePosition()
+        end)
+        
+        Creator.AddSignal(Container:GetPropertyChangedSignal("AbsoluteSize"), function()
+            dropdown:UpdatePosition()
         end)
         
         ThemeManager:OnThemeChange(function(newTheme)
