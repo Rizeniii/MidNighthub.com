@@ -1083,22 +1083,14 @@ registerModule(4, function()
             Parent = Container
         })
         
-        local OptionsContainer = Creator.New("Frame", {
-            Size = UDim2.fromScale(1, 1),
-            BackgroundTransparency = 1,
-            Visible = false,
-            ZIndex = 200,
-            Parent = Services.CoreGui
-        })
-        
         local OptionsFrame = Creator.New("Frame", {
-            Size = UDim2.new(0, 0, 0, 0),
-            Position = UDim2.new(0, 0, 0, 0),
+            Size = UDim2.new(1, 0, 0, 0),
+            Position = UDim2.new(0, 0, 0, 55),
             BackgroundColor3 = Theme.Surface,
             ClipsDescendants = true,
             Visible = false,
             ZIndex = 201,
-            Parent = OptionsContainer
+            Parent = Container
         }, {
             Creator.New("UICorner", {CornerRadius = UDim.new(0, 10)}),
             Creator.New("UIStroke", {Color = Theme.Border, Thickness = 1})
@@ -1190,15 +1182,6 @@ registerModule(4, function()
             OptionsScroll.CanvasSize = UDim2.new(0, 0, 0, OptionsLayout.AbsoluteContentSize.Y + 10)
         end
         
-        function dropdown:UpdatePosition()
-            if Container and Container.Parent then
-                local absPos = Container.AbsolutePosition
-                local absSize = Container.AbsoluteSize
-                OptionsFrame.Position = UDim2.new(0, absPos.X, 0, absPos.Y + absSize.Y + 5)
-                OptionsFrame.Size = UDim2.new(0, absSize.X, 0, OptionsFrame.Size.Y.Offset)
-            end
-        end
-        
         function dropdown:Open()
             if not dropdown.Enabled or dropdown.IsOpen then return end
             
@@ -1206,9 +1189,6 @@ registerModule(4, function()
             local optionCount = #config.Options
             local totalHeight = math.min(optionCount * 37 + 10, 200)
             
-            dropdown:UpdatePosition()
-            
-            OptionsContainer.Visible = true
             OptionsFrame.Visible = true
             OptionsFrame.ZIndex = 201
             OptionsScroll.ZIndex = 202
@@ -1219,7 +1199,7 @@ registerModule(4, function()
                 end
             end
             
-            Creator.TweenObject(OptionsFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(0, OptionsFrame.Size.X.Offset, 0, totalHeight)}):Play()
+            Creator.TweenObject(OptionsFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, totalHeight)}):Play()
             Creator.TweenObject(ChevronIcon, TweenInfo.new(0.3), {Rotation = 180}):Play()
         end
         
@@ -1227,13 +1207,12 @@ registerModule(4, function()
             if not dropdown.IsOpen then return end
             
             dropdown.IsOpen = false
-            Creator.TweenObject(OptionsFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(0, OptionsFrame.Size.X.Offset, 0, 0)}):Play()
+            Creator.TweenObject(OptionsFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, 0)}):Play()
             Creator.TweenObject(ChevronIcon, TweenInfo.new(0.3), {Rotation = 0}):Play()
             
             task.delay(0.3, function()
                 if not dropdown.IsOpen then
                     OptionsFrame.Visible = false
-                    OptionsContainer.Visible = false
                 end
             end)
         end
@@ -1258,6 +1237,10 @@ registerModule(4, function()
         ThemeManager:OnThemeChange(function(newTheme)
             ChevronIcon.ImageColor3 = newTheme.Text
             OptionsScroll.ScrollBarImageColor3 = newTheme.Accent
+            OptionsFrame.BackgroundColor3 = newTheme.Surface
+            Container.BackgroundColor3 = newTheme.Surface
+            Label.TextColor3 = newTheme.Text
+            ValueLabel.TextColor3 = newTheme.SubText
             if IconImg then
                 IconImg.ImageColor3 = newTheme.Text
             end
