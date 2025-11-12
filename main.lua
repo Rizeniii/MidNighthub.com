@@ -1011,270 +1011,269 @@ registerModule(4, function()
     end
     
     function Elements.CreateDropdown(parent, config)
-        local Theme = ThemeManager:GetTheme()
-        local dropdown = {Value = config.Default or (config.Options[1] or ""), Enabled = true, IsOpen = false}
-        
-        local Container = Creator.New("Frame", {
-            Size = UDim2.new(1, 0, 0, 50),
-            BackgroundColor3 = Theme.Surface,
-            BackgroundTransparency = 0.3,
-            Parent = parent
-        }, {
-            Creator.New("UICorner", {CornerRadius = UDim.new(0, 10)}),
-            Creator.New("UIStroke", {Color = Theme.Border, Thickness = 1, Transparency = 0.5})
-        })
-        
-        local IconImg
-        if config.Icon and config.IconPosition == "before" then
-            IconImg = Creator.New("ImageLabel", {
-                Image = config.Icon,
-                Size = UDim2.fromOffset(20, 20),
-                Position = UDim2.new(0, 15, 0.5, -10),
-                ImageColor3 = Theme.Text,
-                Parent = Container
-            })
-        end
-        
-        local labelOffset = (config.Icon and config.IconPosition == "before") and 45 or 18
-        
-        local Label = Creator.New("TextLabel", {
-            Text = config.Title,
-            Position = UDim2.new(0, labelOffset, 0, 0),
-            Size = UDim2.new(1, -100 - (labelOffset - 18), 0, 25),
-            TextXAlignment = Enum.TextXAlignment.Left,
-            Parent = Container
-        })
-        
-        local ValueLabel = Creator.New("TextLabel", {
-            Text = dropdown.Value,
-            Position = UDim2.new(0, labelOffset, 0, 25),
-            Size = UDim2.new(1, -100 - (labelOffset - 18), 0, 20),
-            TextXAlignment = Enum.TextXAlignment.Left,
-            TextColor3 = Theme.SubText,
-            TextSize = 12,
-            Parent = Container
-        })
-        
-        local ChevronIcon = Creator.New("ImageLabel", {
-            Image = Icons.GetIcon("chevrondown"),
-            Size = UDim2.fromOffset(16, 16),
-            Position = UDim2.new(1, -26, 0.5, -8),
+    local Theme = ThemeManager:GetTheme()
+    local dropdown = {Value = config.Default or (config.Options[1] or ""), Enabled = true, IsOpen = false}
+    
+    local Container = Creator.New("Frame", {
+        Size = UDim2.new(1, 0, 0, 50),
+        BackgroundColor3 = Theme.Surface,
+        BackgroundTransparency = 0.3,
+        Parent = parent
+    }, {
+        Creator.New("UICorner", {CornerRadius = UDim.new(0, 10)}),
+        Creator.New("UIStroke", {Color = Theme.Border, Thickness = 1, Transparency = 0.5})
+    })
+    
+    local IconImg
+    if config.Icon and config.IconPosition == "before" then
+        IconImg = Creator.New("ImageLabel", {
+            Image = config.Icon,
+            Size = UDim2.fromOffset(20, 20),
+            Position = UDim2.new(0, 15, 0.5, -10),
             ImageColor3 = Theme.Text,
             Parent = Container
         })
-        
-        local IconImg2
-        if config.Icon and config.IconPosition == "after" then
-            ChevronIcon.Position = UDim2.new(1, -50, 0.5, -8)
-            IconImg2 = Creator.New("ImageLabel", {
-                Image = config.Icon,
-                Size = UDim2.fromOffset(20, 20),
-                Position = UDim2.new(1, -26, 0.5, -10),
-                ImageColor3 = Theme.Text,
-                Parent = Container
-            })
-        end
-        
-        local Button = Creator.New("TextButton", {
-            Size = UDim2.fromScale(1, 1),
-            BackgroundTransparency = 1,
-            Text = "",
-            ZIndex = 2,
+    end
+    
+    local labelOffset = (config.Icon and config.IconPosition == "before") and 45 or 18
+    
+    local Label = Creator.New("TextLabel", {
+        Text = config.Title,
+        Position = UDim2.new(0, labelOffset, 0, 0),
+        Size = UDim2.new(1, -100 - (labelOffset - 18), 0, 25),
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = Container
+    })
+    
+    local ValueLabel = Creator.New("TextLabel", {
+        Text = dropdown.Value,
+        Position = UDim2.new(0, labelOffset, 0, 25),
+        Size = UDim2.new(1, -100 - (labelOffset - 18), 0, 20),
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextColor3 = Theme.SubText,
+        TextSize = 12,
+        Parent = Container
+    })
+    
+    local ChevronIcon = Creator.New("ImageLabel", {
+        Image = Icons.GetIcon("chevrondown"),
+        Size = UDim2.fromOffset(16, 16),
+        Position = UDim2.new(1, -26, 0.5, -8),
+        ImageColor3 = Theme.Text,
+        Parent = Container
+    })
+    
+    local IconImg2
+    if config.Icon and config.IconPosition == "after" then
+        ChevronIcon.Position = UDim2.new(1, -50, 0.5, -8)
+        IconImg2 = Creator.New("ImageLabel", {
+            Image = config.Icon,
+            Size = UDim2.fromOffset(20, 20),
+            Position = UDim2.new(1, -26, 0.5, -10),
+            ImageColor3 = Theme.Text,
             Parent = Container
         })
+    end
+    
+    local Button = Creator.New("TextButton", {
+        Size = UDim2.fromScale(1, 1),
+        BackgroundTransparency = 1,
+        Text = "",
+        ZIndex = 2,
+        Parent = Container
+    })
+    
+    local OptionsFrame = Creator.New("Frame", {
+        Size = UDim2.new(1, 0, 0, 0),
+        Position = UDim2.new(0, 0, 0, 55),
+        BackgroundColor3 = Theme.Surface,
+        ClipsDescendants = true,
+        Visible = false,
+        ZIndex = 250,
+        Parent = Container
+    }, {
+        Creator.New("UICorner", {CornerRadius = UDim.new(0, 10)}),
+        Creator.New("UIStroke", {Color = Theme.Border, Thickness = 1})
+    })
+    
+    local OptionsScroll = Creator.New("ScrollingFrame", {
+        Size = UDim2.fromScale(1, 1),
+        BackgroundTransparency = 1,
+        ScrollBarThickness = 4,
+        ScrollBarImageColor3 = Theme.Accent,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        ZIndex = 251,
+        Parent = OptionsFrame
+    }, {
+        Creator.New("UIListLayout", {Padding = UDim.new(0, 2), SortOrder = Enum.SortOrder.LayoutOrder}),
+        Creator.New("UIPadding", {PaddingTop = UDim.new(0, 5), PaddingBottom = UDim.new(0, 5), PaddingLeft = UDim.new(0, 5), PaddingRight = UDim.new(0, 5)})
+    })
+    
+    local OptionsLayout = OptionsScroll:FindFirstChildOfClass("UIListLayout")
+    
+    function dropdown:SetValue(value, silent)
+        if not dropdown.Enabled then return end
         
-        local OptionsFrame = Creator.New("Frame", {
-            Size = UDim2.new(1, 0, 0, 0),
-            Position = UDim2.new(0, 0, 0, 55),
-            BackgroundColor3 = Theme.Surface,
-            ClipsDescendants = true,
-            Visible = false,
-            ZIndex = 201,
-            Parent = Container
-        }, {
-            Creator.New("UICorner", {CornerRadius = UDim.new(0, 10)}),
-            Creator.New("UIStroke", {Color = Theme.Border, Thickness = 1})
-        })
+        dropdown.Value = value
+        ValueLabel.Text = value
         
-        local OptionsScroll = Creator.New("ScrollingFrame", {
-            Size = UDim2.fromScale(1, 1),
-            BackgroundTransparency = 1,
-            ScrollBarThickness = 4,
-            ScrollBarImageColor3 = Theme.Accent,
-            CanvasSize = UDim2.new(0, 0, 0, 0),
-            ZIndex = 202,
-            Parent = OptionsFrame
-        }, {
-            Creator.New("UIListLayout", {Padding = UDim.new(0, 2), SortOrder = Enum.SortOrder.LayoutOrder}),
-            Creator.New("UIPadding", {PaddingTop = UDim.new(0, 5), PaddingBottom = UDim.new(0, 5), PaddingLeft = UDim.new(0, 5), PaddingRight = UDim.new(0, 5)})
-        })
-        
-        local OptionsLayout = OptionsScroll:FindFirstChildOfClass("UIListLayout")
-        
-        function dropdown:SetValue(value, silent)
-            if not dropdown.Enabled then return end
-            
-            dropdown.Value = value
-            ValueLabel.Text = value
-            
-            if config.SaveConfig then
-                ConfigManager:Save(config.Title, value)
-            end
-            
-            if not silent then
-                pcall(function()
-                    if config.Callback then
-                        task.spawn(config.Callback, value)
-                    end
-                end)
-            end
+        if config.SaveConfig then
+            ConfigManager:Save(config.Title, value)
         end
         
-        function dropdown:SetEnabled(enabled)
-            dropdown.Enabled = enabled
-            Button.Active = enabled
-            Container.BackgroundTransparency = enabled and 0.3 or 0.6
-        end
-        
-        function dropdown:Refresh(newOptions)
-            for _, child in pairs(OptionsScroll:GetChildren()) do
-                if child:IsA("TextButton") then
-                    child:Destroy()
-                end
-            end
-            
-            config.Options = newOptions or config.Options
-            
-            for _, option in ipairs(config.Options) do
-                local OptionButton = Creator.New("TextButton", {
-                    Size = UDim2.new(1, -10, 0, 35),
-                    BackgroundColor3 = Theme.Hover,
-                    BackgroundTransparency = 1,
-                    Text = option,
-                    TextColor3 = Theme.Text,
-                    Font = Enum.Font.Gotham,
-                    TextSize = 13,
-                    TextXAlignment = Enum.TextXAlignment.Left,
-                    ZIndex = 203,
-                    Parent = OptionsScroll
-                }, {
-                    Creator.New("UICorner", {CornerRadius = UDim.new(0, 6)}),
-                    Creator.New("UIPadding", {PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10)})
-                })
-                
-                Creator.AddSignal(OptionButton.MouseEnter, function()
-                    Creator.TweenObject(OptionButton, TweenInfo.new(0.2), {BackgroundTransparency = 0.5}):Play()
-                end)
-                
-                Creator.AddSignal(OptionButton.MouseLeave, function()
-                    Creator.TweenObject(OptionButton, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
-                end)
-                
-                Creator.AddSignal(OptionButton.MouseButton1Click, function()
-                    if not dropdown.Enabled then return end
-                    
-                    dropdown:SetValue(option)
-                    dropdown:Close()
-                end)
-            end
-            
-            task.wait()
-            OptionsScroll.CanvasSize = UDim2.new(0, 0, 0, OptionsLayout.AbsoluteContentSize.Y + 10)
-        end
-        
-        function dropdown:Open()
-            if not dropdown.Enabled or dropdown.IsOpen then return end
-            
-            dropdown.IsOpen = true
-            local optionCount = #config.Options
-            local totalHeight = math.min(optionCount * 37 + 10, 200)
-            
-            OptionsFrame.Visible = true
-            OptionsFrame.ZIndex = 201
-            OptionsScroll.ZIndex = 202
-            
-            for _, child in pairs(OptionsScroll:GetChildren()) do
-                if child:IsA("TextButton") then
-                    child.ZIndex = 203
-                end
-            end
-            
-            Creator.TweenObject(OptionsFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, totalHeight)}):Play()
-            Creator.TweenObject(ChevronIcon, TweenInfo.new(0.3), {Rotation = 180}):Play()
-        end
-        
-        function dropdown:Close()
-            if not dropdown.IsOpen then return end
-            
-            dropdown.IsOpen = false
-            Creator.TweenObject(OptionsFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, 0)}):Play()
-            Creator.TweenObject(ChevronIcon, TweenInfo.new(0.3), {Rotation = 0}):Play()
-            
-            task.delay(0.3, function()
-                if not dropdown.IsOpen then
-                    OptionsFrame.Visible = false
+        if not silent then
+            pcall(function()
+                if config.Callback then
+                    task.spawn(config.Callback, value)
                 end
             end)
         end
-        
-        function dropdown:Toggle()
-            if dropdown.IsOpen then
-                dropdown:Close()
-            else
-                dropdown:Open()
+    end
+    
+    function dropdown:SetEnabled(enabled)
+        dropdown.Enabled = enabled
+        Button.Active = enabled
+        Container.BackgroundTransparency = enabled and 0.3 or 0.6
+    end
+    
+    function dropdown:Refresh(newOptions)
+        for _, child in pairs(OptionsScroll:GetChildren()) do
+            if child:IsA("TextButton") then
+                child:Destroy()
             end
         end
         
-        Creator.AddSignal(Button.MouseButton1Click, function()
-            if not dropdown.Enabled then return end
-            dropdown:Toggle()
-        end)
+        config.Options = newOptions or config.Options
         
-        Creator.AddSignal(OptionsLayout:GetPropertyChangedSignal("AbsoluteContentSize"), function()
-            OptionsScroll.CanvasSize = UDim2.new(0, 0, 0, OptionsLayout.AbsoluteContentSize.Y + 10)
-        end)
-        
-        ThemeManager:OnThemeChange(function(newTheme)
-            ChevronIcon.ImageColor3 = newTheme.Text
-            OptionsScroll.ScrollBarImageColor3 = newTheme.Accent
-            OptionsFrame.BackgroundColor3 = newTheme.Surface
-            Container.BackgroundColor3 = newTheme.Surface
-            Label.TextColor3 = newTheme.Text
-            ValueLabel.TextColor3 = newTheme.SubText
-            if IconImg then
-                IconImg.ImageColor3 = newTheme.Text
-            end
-            if IconImg2 then
-                IconImg2.ImageColor3 = newTheme.Text
-            end
+        for _, option in ipairs(config.Options) do
+            local OptionButton = Creator.New("TextButton", {
+                Size = UDim2.new(1, -10, 0, 35),
+                BackgroundColor3 = Theme.Hover,
+                BackgroundTransparency = 1,
+                Text = option,
+                TextColor3 = Theme.Text,
+                Font = Enum.Font.Gotham,
+                TextSize = 13,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                ZIndex = 252,
+                Parent = OptionsScroll
+            }, {
+                Creator.New("UICorner", {CornerRadius = UDim.new(0, 6)}),
+                Creator.New("UIPadding", {PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10)})
+            })
             
-            for _, child in pairs(OptionsScroll:GetChildren()) do
-                if child:IsA("TextButton") then
-                    child.TextColor3 = newTheme.Text
-                end
+            Creator.AddSignal(OptionButton.MouseEnter, function()
+                Creator.TweenObject(OptionButton, TweenInfo.new(0.2), {BackgroundTransparency = 0.5}):Play()
+            end)
+            
+            Creator.AddSignal(OptionButton.MouseLeave, function()
+                Creator.TweenObject(OptionButton, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
+            end)
+            
+            Creator.AddSignal(OptionButton.MouseButton1Click, function()
+                if not dropdown.Enabled then return end
+                
+                dropdown:SetValue(option)
+                dropdown:Close()
+            end)
+        end
+        
+        task.wait()
+        OptionsScroll.CanvasSize = UDim2.new(0, 0, 0, OptionsLayout.AbsoluteContentSize.Y + 10)
+    end
+    
+    function dropdown:Open()
+        if not dropdown.Enabled or dropdown.IsOpen then return end
+        
+        dropdown.IsOpen = true
+        local optionCount = #config.Options
+        local totalHeight = math.min(optionCount * 37 + 10, 200)
+        
+        Container.ZIndex = 200
+        OptionsFrame.Visible = true
+        OptionsFrame.ZIndex = 250
+        OptionsScroll.ZIndex = 251
+        
+        for _, child in pairs(OptionsScroll:GetChildren()) do
+            if child:IsA("TextButton") then
+                child.ZIndex = 252
+            end
+        end
+        
+        Creator.TweenObject(OptionsFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, totalHeight)}):Play()
+        Creator.TweenObject(ChevronIcon, TweenInfo.new(0.3), {Rotation = 180}):Play()
+    end
+    
+    function dropdown:Close()
+        if not dropdown.IsOpen then return end
+        
+        dropdown.IsOpen = false
+        Creator.TweenObject(OptionsFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, 0)}):Play()
+        Creator.TweenObject(ChevronIcon, TweenInfo.new(0.3), {Rotation = 0}):Play()
+        
+        task.delay(0.3, function()
+            if not dropdown.IsOpen then
+                OptionsFrame.Visible = false
+                Container.ZIndex = 1
             end
         end)
+    end
+    
+    function dropdown:Toggle()
+        if dropdown.IsOpen then
+            dropdown:Close()
+        else
+            dropdown:Open()
+        end
+    end
+    
+    Creator.AddSignal(Button.MouseButton1Click, function()
+        if not dropdown.Enabled then return end
+        dropdown:Toggle()
+    end)
+    
+    Creator.AddSignal(OptionsLayout:GetPropertyChangedSignal("AbsoluteContentSize"), function()
+        OptionsScroll.CanvasSize = UDim2.new(0, 0, 0, OptionsLayout.AbsoluteContentSize.Y + 10)
+    end)
+    
+    ThemeManager:OnThemeChange(function(newTheme)
+        ChevronIcon.ImageColor3 = newTheme.Text
+        OptionsScroll.ScrollBarImageColor3 = newTheme.Accent
+        OptionsFrame.BackgroundColor3 = newTheme.Surface
+        Container.BackgroundColor3 = newTheme.Surface
+        Label.TextColor3 = newTheme.Text
+        ValueLabel.TextColor3 = newTheme.SubText
+        if IconImg then
+            IconImg.ImageColor3 = newTheme.Text
+        end
+        if IconImg2 then
+            IconImg2.ImageColor3 = newTheme.Text
+        end
         
-        dropdown:Refresh(config.Options)
-        
-        if config.SaveConfig then
-            local saved = ConfigManager:Load(config.Title)
-            if saved ~= nil then
-                dropdown:SetValue(saved, true)
-            else
-                dropdown:SetValue(dropdown.Value, true)
+        for _, child in pairs(OptionsScroll:GetChildren()) do
+            if child:IsA("TextButton") then
+                child.TextColor3 = newTheme.Text
             end
+        end
+    end)
+    
+    dropdown:Refresh(config.Options)
+    
+    if config.SaveConfig then
+        local saved = ConfigManager:Load(config.Title)
+        if saved ~= nil then
+            dropdown:SetValue(saved, true)
         else
             dropdown:SetValue(dropdown.Value, true)
         end
-        
-        dropdown.Container = Container
-        
-        return dropdown
+    else
+        dropdown:SetValue(dropdown.Value, true)
     end
     
-    return Elements
-end)
+    dropdown.Container = Container
+    
+    return dropdown
+end
 
 registerModule(5, function()
     local Services = require(1)
