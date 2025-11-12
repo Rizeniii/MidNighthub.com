@@ -69,6 +69,7 @@ registerModule(2, function()
     
     function Creator.AddSignal(signal, callback)
         table.insert(Creator.Signals, signal:Connect(callback))
+        return Creator.Signals[#Creator.Signals]
     end
     
     function Creator.Disconnect()
@@ -240,6 +241,28 @@ registerModule(7, function()
         return true
     end
     
+    function ConfigManager:Clear()
+        self.CurrentConfig = {}
+        return true
+    end
+    
+    function ConfigManager:Export()
+        return Services.HttpService:JSONEncode(self.CurrentConfig)
+    end
+    
+    function ConfigManager:Import(jsonData)
+        local success, result = pcall(function()
+            return Services.HttpService:JSONDecode(jsonData)
+        end)
+        
+        if success then
+            self.CurrentConfig = result
+            return true
+        end
+        
+        return false
+    end
+    
     return ConfigManager
 end)
 
@@ -330,14 +353,14 @@ registerModule(4, function()
         YesButton.MouseButton1Click:Connect(function()
             Dialog:Destroy()
             if config.OnConfirm then
-                config.OnConfirm()
+                task.spawn(config.OnConfirm)
             end
         end)
         
         NoButton.MouseButton1Click:Connect(function()
             Dialog:Destroy()
             if config.OnCancel then
-                config.OnCancel()
+                task.spawn(config.OnCancel)
             end
         end)
         
@@ -432,12 +455,16 @@ registerModule(4, function()
         
         CopyButton.MouseButton1Click:Connect(function()
             if onCopy then
-                onCopy(errorMessage)
+                task.spawn(onCopy, errorMessage)
             end
-            setclipboard(errorMessage)
+            pcall(function()
+                setclipboard(errorMessage)
+            end)
             CopyButton.Text = "Copied!"
             task.wait(1)
-            CopyButton.Text = "Copy Error"
+            if CopyButton and CopyButton.Parent then
+                CopyButton.Text = "Copy Error"
+            end
         end)
         
         CloseButton.MouseButton1Click:Connect(function()
@@ -449,7 +476,7 @@ registerModule(4, function()
     
     function Elements.CreateToggle(parent, config)
         local Theme = ThemeManager:GetTheme()
-        local toggle = {Value = config.Default or false}
+        local toggle = {Value = config.Default or false, Enabled = true}
         
         local Container = Creator.New("Frame", {
             Size = UDim2.new(1, 0, 0, 50),
@@ -513,7 +540,9 @@ registerModule(4, function()
             Creator.New("UICorner", {CornerRadius = UDim.new(1, 0)})
         })
         
-        function toggle:SetValue(value)
+        function toggle:SetValue(value, silent)
+            if not toggle.Enabled then return end
+            
             toggle.Value = value
             local pos = value and UDim2.new(1, -23, 0.5, -10) or UDim2.new(0, 3, 0.5, -10)
             local currentTheme = ThemeManager:GetTheme()
@@ -527,14 +556,24 @@ registerModule(4, function()
                 ConfigManager:Save(config.Title, value)
             end
             
-            pcall(function()
-                if config.Callback then
-                    config.Callback(value)
-                end
-            end)
+            if not silent then
+                pcall(function()
+                    if config.Callback then
+                        task.spawn(config.Callback, value)
+                    end
+                end)
+            end
+        end
+        
+        function toggle:SetEnabled(enabled)
+            toggle.Enabled = enabled
+            Button.Active = enabled
+            Container.BackgroundTransparency = enabled and 0.3 or 0.6
         end
         
         Creator.AddSignal(Button.MouseButton1Click, function()
+            if not toggle.Enabled then return end
+            
             if config.ConfirmDialog then
                 local dialog = Elements.CreateConfirmDialog(parent.Parent.Parent.Parent, {
                     Title = config.ConfirmDialog.Title or "Confirmation",
@@ -564,12 +603,12 @@ registerModule(4, function()
         if config.SaveConfig then
             local saved = ConfigManager:Load(config.Title)
             if saved ~= nil then
-                toggle:SetValue(saved)
+                toggle:SetValue(saved, true)
             else
-                toggle:SetValue(toggle.Value)
+                toggle:SetValue(toggle.Value, true)
             end
         else
-            toggle:SetValue(toggle.Value)
+            toggle:SetValue(toggle.Value, true)
         end
         
         return toggle
@@ -577,6 +616,7 @@ registerModule(4, function()
     
     function Elements.CreateButton(parent, config)
         local Theme = ThemeManager:GetTheme()
+        local button = {Enabled = true}
         
         local Container = Creator.New("Frame", {
             Size = UDim2.new(1, 0, 0, 50),
@@ -636,18 +676,28 @@ registerModule(4, function()
             })
         end
         
+        function button:SetEnabled(enabled)
+            button.Enabled = enabled
+            Button.Active = enabled
+            Container.BackgroundTransparency = enabled and 0.3 or 0.6
+        end
+        
         Creator.AddSignal(Button.MouseEnter, function()
+            if not button.Enabled then return end
             Creator.TweenObject(Container, TweenInfo.new(0.3), {BackgroundTransparency = 0.2}):Play()
         end)
         
         Creator.AddSignal(Button.MouseLeave, function()
+            if not button.Enabled then return end
             Creator.TweenObject(Container, TweenInfo.new(0.3), {BackgroundTransparency = 0.3}):Play()
         end)
         
         Creator.AddSignal(Button.MouseButton1Click, function()
+            if not button.Enabled then return end
+            
             pcall(function()
                 if config.Callback then
-                    config.Callback()
+                    task.spawn(config.Callback)
                 end
             end)
         end)
@@ -662,12 +712,15 @@ registerModule(4, function()
             end
         end)
         
-        return {Container = Container, Button = Button}
+        button.Container = Container
+        button.Button = Button
+        
+        return button
     end
     
     function Elements.CreateSlider(parent, config)
         local Theme = ThemeManager:GetTheme()
-        local slider = {Value = config.Default or config.Min}
+        local slider = {Value = config.Default or config.Min, Enabled = true}
         
         local Container = Creator.New("Frame", {
             Size = UDim2.new(1, 0, 0, 60),
@@ -739,7 +792,9 @@ registerModule(4, function()
         
         local dragging = false
         
-        function slider:SetValue(value)
+        function slider:SetValue(value, silent)
+            if not slider.Enabled then return end
+            
             value = math.clamp(value, config.Min, config.Max)
             if config.Rounding then
                 value = math.floor(value / config.Rounding + 0.5) * config.Rounding
@@ -755,35 +810,50 @@ registerModule(4, function()
                 ConfigManager:Save(config.Title, value)
             end
             
-            pcall(function()
-                if config.Callback then
-                    config.Callback(value)
-                end
-            end)
+            if not silent then
+                pcall(function()
+                    if config.Callback then
+                        task.spawn(config.Callback, value)
+                    end
+                end)
+            end
+        end
+        
+        function slider:SetEnabled(enabled)
+            slider.Enabled = enabled
+            ThumbButton.Active = enabled
+            RailButton.Active = enabled
+            Container.BackgroundTransparency = enabled and 0.3 or 0.6
         end
         
         local function UpdateSlider(input)
+            if not slider.Enabled then return end
+            
             local percent = math.clamp((input.Position.X - Rail.AbsolutePosition.X) / Rail.AbsoluteSize.X, 0, 1)
             local value = config.Min + ((config.Max - config.Min) * percent)
             slider:SetValue(value)
         end
         
         Creator.AddSignal(ThumbButton.MouseButton1Down, function()
+            if not slider.Enabled then return end
             dragging = true
         end)
         
         Creator.AddSignal(RailButton.MouseButton1Down, function(x, y)
+            if not slider.Enabled then return end
             dragging = true
             UpdateSlider({Position = Vector2.new(x, y)})
         end)
         
         Creator.AddSignal(ThumbButton.InputBegan, function(input)
+            if not slider.Enabled then return end
             if input.UserInputType == Enum.UserInputType.Touch then
                 dragging = true
             end
         end)
         
         Creator.AddSignal(RailButton.InputBegan, function(input)
+            if not slider.Enabled then return end
             if input.UserInputType == Enum.UserInputType.Touch then
                 dragging = true
                 UpdateSlider(input)
@@ -791,7 +861,7 @@ registerModule(4, function()
         end)
         
         Creator.AddSignal(Services.UserInputService.InputChanged, function(input)
-            if dragging then
+            if dragging and slider.Enabled then
                 if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
                     UpdateSlider(input)
                 end
@@ -812,12 +882,12 @@ registerModule(4, function()
         if config.SaveConfig then
             local saved = ConfigManager:Load(config.Title)
             if saved ~= nil then
-                slider:SetValue(saved)
+                slider:SetValue(saved, true)
             else
-                slider:SetValue(slider.Value)
+                slider:SetValue(slider.Value, true)
             end
         else
-            slider:SetValue(slider.Value)
+            slider:SetValue(slider.Value, true)
         end
         
         return slider
@@ -825,8 +895,7 @@ registerModule(4, function()
     
     function Elements.CreateDropdown(parent, config)
         local Theme = ThemeManager:GetTheme()
-        local dropdown = {Value = config.Default or config.Options[1] or ""}
-        local isOpen = false
+        local dropdown = {Value = config.Default or (config.Options[1] or ""), Enabled = true, IsOpen = false}
         
         local Container = Creator.New("Frame", {
             Size = UDim2.new(1, 0, 0, 50),
@@ -893,24 +962,41 @@ registerModule(4, function()
             Size = UDim2.fromScale(1, 1),
             BackgroundTransparency = 1,
             Text = "",
+            ZIndex = 2,
             Parent = Container
         })
         
-        local OptionsContainer = Creator.New("Frame", {
+        local OptionsFrame = Creator.New("Frame", {
             Size = UDim2.new(1, 0, 0, 0),
-            Position = UDim2.new(0, 0, 1, 5),
+            Position = UDim2.new(0, 0, 0, 55),
             BackgroundColor3 = Theme.Surface,
             ClipsDescendants = true,
             Visible = false,
-            ZIndex = 10,
+            ZIndex = 50,
             Parent = Container
         }, {
             Creator.New("UICorner", {CornerRadius = UDim.new(0, 10)}),
-            Creator.New("UIStroke", {Color = Theme.Border, Thickness = 1}),
-            Creator.New("UIListLayout", {Padding = UDim.new(0, 2), SortOrder = Enum.SortOrder.LayoutOrder})
+            Creator.New("UIStroke", {Color = Theme.Border, Thickness = 1})
         })
         
-        function dropdown:SetValue(value)
+        local OptionsScroll = Creator.New("ScrollingFrame", {
+            Size = UDim2.fromScale(1, 1),
+            BackgroundTransparency = 1,
+            ScrollBarThickness = 4,
+            ScrollBarImageColor3 = Theme.Accent,
+            CanvasSize = UDim2.new(0, 0, 0, 0),
+            ZIndex = 51,
+            Parent = OptionsFrame
+        }, {
+            Creator.New("UIListLayout", {Padding = UDim.new(0, 2), SortOrder = Enum.SortOrder.LayoutOrder}),
+            Creator.New("UIPadding", {PaddingTop = UDim.new(0, 5), PaddingBottom = UDim.new(0, 5), PaddingLeft = UDim.new(0, 5), PaddingRight = UDim.new(0, 5)})
+        })
+        
+        local OptionsLayout = OptionsScroll:FindFirstChildOfClass("UIListLayout")
+        
+        function dropdown:SetValue(value, silent)
+            if not dropdown.Enabled then return end
+            
             dropdown.Value = value
             ValueLabel.Text = value
             
@@ -918,33 +1004,45 @@ registerModule(4, function()
                 ConfigManager:Save(config.Title, value)
             end
             
-            pcall(function()
-                if config.Callback then
-                    config.Callback(value)
-                end
-            end)
+            if not silent then
+                pcall(function()
+                    if config.Callback then
+                        task.spawn(config.Callback, value)
+                    end
+                end)
+            end
+        end
+        
+        function dropdown:SetEnabled(enabled)
+            dropdown.Enabled = enabled
+            Button.Active = enabled
+            Container.BackgroundTransparency = enabled and 0.3 or 0.6
         end
         
         function dropdown:Refresh(newOptions)
-            for _, child in pairs(OptionsContainer:GetChildren()) do
+            for _, child in pairs(OptionsScroll:GetChildren()) do
                 if child:IsA("TextButton") then
                     child:Destroy()
                 end
             end
             
-            config.Options = newOptions
+            config.Options = newOptions or config.Options
             
-            for _, option in ipairs(newOptions) do
+            for _, option in ipairs(config.Options) do
                 local OptionButton = Creator.New("TextButton", {
-                    Size = UDim2.new(1, 0, 0, 35),
+                    Size = UDim2.new(1, -10, 0, 35),
                     BackgroundColor3 = Theme.Hover,
                     BackgroundTransparency = 1,
                     Text = option,
                     TextColor3 = Theme.Text,
                     Font = Enum.Font.Gotham,
                     TextSize = 13,
-                    ZIndex = 11,
-                    Parent = OptionsContainer
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    ZIndex = 52,
+                    Parent = OptionsScroll
+                }, {
+                    Creator.New("UICorner", {CornerRadius = UDim.new(0, 6)}),
+                    Creator.New("UIPadding", {PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10)})
                 })
                 
                 Creator.AddSignal(OptionButton.MouseEnter, function()
@@ -956,43 +1054,83 @@ registerModule(4, function()
                 end)
                 
                 Creator.AddSignal(OptionButton.MouseButton1Click, function()
+                    if not dropdown.Enabled then return end
+                    
                     dropdown:SetValue(option)
-                    isOpen = false
-                    OptionsContainer.Visible = false
-                    Creator.TweenObject(OptionsContainer, TweenInfo.new(0.3), {Size = UDim2.new(1, 0, 0, 0)}):Play()
-                    Creator.TweenObject(ChevronIcon, TweenInfo.new(0.3), {Rotation = 0}):Play()
-                    Container.Size = UDim2.new(1, 0, 0, 50)
+                    dropdown:Close()
                 end)
+            end
+            
+            task.wait()
+            OptionsScroll.CanvasSize = UDim2.new(0, 0, 0, OptionsLayout.AbsoluteContentSize.Y + 10)
+        end
+        
+        function dropdown:Open()
+            if not dropdown.Enabled or dropdown.IsOpen then return end
+            
+            dropdown.IsOpen = true
+            local optionCount = #config.Options
+            local totalHeight = math.min(optionCount * 37 + 10, 200)
+            
+            OptionsFrame.Visible = true
+            OptionsFrame.ZIndex = 50
+            OptionsScroll.ZIndex = 51
+            
+            for _, child in pairs(OptionsScroll:GetChildren()) do
+                if child:IsA("TextButton") then
+                    child.ZIndex = 52
+                end
+            end
+            
+            Creator.TweenObject(OptionsFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, totalHeight)}):Play()
+            Creator.TweenObject(ChevronIcon, TweenInfo.new(0.3), {Rotation = 180}):Play()
+        end
+        
+        function dropdown:Close()
+            if not dropdown.IsOpen then return end
+            
+            dropdown.IsOpen = false
+            Creator.TweenObject(OptionsFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, 0)}):Play()
+            Creator.TweenObject(ChevronIcon, TweenInfo.new(0.3), {Rotation = 0}):Play()
+            
+            task.delay(0.3, function()
+                if not dropdown.IsOpen then
+                    OptionsFrame.Visible = false
+                end
+            end)
+        end
+        
+        function dropdown:Toggle()
+            if dropdown.IsOpen then
+                dropdown:Close()
+            else
+                dropdown:Open()
             end
         end
         
         Creator.AddSignal(Button.MouseButton1Click, function()
-            isOpen = not isOpen
-            
-            if isOpen then
-                local optionCount = #config.Options
-                local totalHeight = math.min(optionCount * 37, 200)
-                
-                OptionsContainer.Visible = true
-                Creator.TweenObject(OptionsContainer, TweenInfo.new(0.3), {Size = UDim2.new(1, 0, 0, totalHeight)}):Play()
-                Creator.TweenObject(ChevronIcon, TweenInfo.new(0.3), {Rotation = 180}):Play()
-                Container.Size = UDim2.new(1, 0, 0, 50 + totalHeight + 5)
-            else
-                Creator.TweenObject(OptionsContainer, TweenInfo.new(0.3), {Size = UDim2.new(1, 0, 0, 0)}):Play()
-                Creator.TweenObject(ChevronIcon, TweenInfo.new(0.3), {Rotation = 0}):Play()
-                task.wait(0.3)
-                OptionsContainer.Visible = false
-                Container.Size = UDim2.new(1, 0, 0, 50)
-            end
+            if not dropdown.Enabled then return end
+            dropdown:Toggle()
+        end)
+        
+        Creator.AddSignal(OptionsLayout:GetPropertyChangedSignal("AbsoluteContentSize"), function()
+            OptionsScroll.CanvasSize = UDim2.new(0, 0, 0, OptionsLayout.AbsoluteContentSize.Y + 10)
         end)
         
         ThemeManager:OnThemeChange(function(newTheme)
             ChevronIcon.ImageColor3 = newTheme.Text
+            OptionsScroll.ScrollBarImageColor3 = newTheme.Accent
             if IconImg then
                 IconImg.ImageColor3 = newTheme.Text
             end
             if IconImg2 then
                 IconImg2.ImageColor3 = newTheme.Text
+            end
+            
+            for _, child in pairs(OptionsScroll:GetChildren()) do
+                if child:IsA("TextButton") then
+                    child.TextColor3 = newTheme.Text
+                end
             end
         end)
         
@@ -1001,13 +1139,15 @@ registerModule(4, function()
         if config.SaveConfig then
             local saved = ConfigManager:Load(config.Title)
             if saved ~= nil then
-                dropdown:SetValue(saved)
+                dropdown:SetValue(saved, true)
             else
-                dropdown:SetValue(dropdown.Value)
+                dropdown:SetValue(dropdown.Value, true)
             end
         else
-            dropdown:SetValue(dropdown.Value)
+            dropdown:SetValue(dropdown.Value, true)
         end
+        
+        dropdown.Container = Container
         
         return dropdown
     end
@@ -1031,6 +1171,7 @@ registerModule(5, function()
         Window.Tabs = {}
         Window.NotificationQueue = {}
         Window.ThemeElements = {}
+        Window.ActiveDropdowns = {}
         
         local ScreenGui = Creator.New("ScreenGui", {
             ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
@@ -1136,7 +1277,10 @@ registerModule(5, function()
                 local newHeight = math.clamp(resizeStartSize.Y.Offset + delta.Y, minSize.Y.Offset, maxSize.Y.Offset)
                 MainFrame.Size = UDim2.new(0, newWidth, 0, newHeight)
                 
-                ResizeHandle.Position = UDim2.new(1, -20, 1, -20)
+                task.spawn(function()
+                    task.wait()
+                    ResizeHandle.Position = UDim2.new(1, -20, 1, -20)
+                end)
             end
         end)
         
@@ -1263,14 +1407,31 @@ registerModule(5, function()
         local isOpen = true
         local toggleKey = config.ToggleKey or Enum.KeyCode.LeftControl
         
+        local function CloseAllDropdowns()
+            for _, dropdown in pairs(Window.ActiveDropdowns) do
+                if dropdown and dropdown.Close then
+                    dropdown:Close()
+                end
+            end
+        end
+        
+        Creator.AddSignal(Services.UserInputService.InputBegan, function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                task.spawn(CloseAllDropdowns)
+            end
+        end)
+        
         local function ToggleUI()
             isOpen = not isOpen
             if isOpen then
                 MainFrame.Visible = true
                 Creator.TweenObject(MainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back), {Size = config.Size or UDim2.new(0, 600, 0, 500)}):Play()
                 task.wait(0.4)
-                ResizeHandle.Position = UDim2.new(1, -20, 1, -20)
+                task.spawn(function()
+                    ResizeHandle.Position = UDim2.new(1, -20, 1, -20)
+                end)
             else
+                CloseAllDropdowns()
                 Creator.TweenObject(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back), {Size = UDim2.new(0, 0, 0, 0)}):Play()
                 task.wait(0.3)
                 MainFrame.Visible = false
@@ -1298,7 +1459,7 @@ registerModule(5, function()
                 Parent = NotifyFrame
             })
             
-            local TitleLabel = Creator.New("TextLabel", {
+                        local TitleLabel = Creator.New("TextLabel", {
                 Text = notifyConfig.Title or "Notification",
                 Position = UDim2.new(0, 60, 0, 12),
                 Size = UDim2.new(1, -70, 0, 18),
@@ -1324,19 +1485,26 @@ registerModule(5, function()
             Creator.TweenObject(NotifyFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back), {BackgroundTransparency = 0.1}):Play()
             
             task.delay(notifyConfig.Duration or 3, function()
-                Creator.TweenObject(NotifyFrame, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
-                task.wait(0.3)
-                NotifyFrame:Destroy()
+                if NotifyFrame and NotifyFrame.Parent then
+                    Creator.TweenObject(NotifyFrame, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
+                    task.wait(0.3)
+                    if NotifyFrame and NotifyFrame.Parent then
+                        NotifyFrame:Destroy()
+                    end
+                end
             end)
         end
         
         function Window:ShowError(errorMsg)
             Elements.CreateErrorDialog(ScreenGui, errorMsg, function(msg)
-                setclipboard(msg)
+                pcall(function()
+                    setclipboard(msg)
+                end)
             end)
         end
         
         Creator.AddSignal(CloseButton.MouseButton1Click, function()
+            CloseAllDropdowns()
             Creator.TweenObject(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back), {Size = UDim2.new(0, 0, 0, 0)}):Play()
             task.wait(0.3)
             ScreenGui:Destroy()
@@ -1352,12 +1520,14 @@ registerModule(5, function()
             end
         end)
         
-        Window:Notify({
-            Title = "UI Loaded",
-            Content = "Interface loaded successfully",
-            Icon = Icons.GetIcon("info"),
-            Duration = 3
-        })
+        task.delay(0.1, function()
+            Window:Notify({
+                Title = "UI Loaded",
+                Content = "Interface loaded successfully",
+                Icon = Icons.GetIcon("info"),
+                Duration = 3
+            })
+        end)
         
         function Window:AddTab(tabConfig)
             local Tab = {}
@@ -1432,7 +1602,7 @@ registerModule(5, function()
                 Creator.New("UIPadding", {PaddingTop = UDim.new(0, 15), PaddingLeft = UDim.new(0, 15), PaddingRight = UDim.new(0, 15), PaddingBottom = UDim.new(0, 15)})
             })
             
-                        table.insert(Window.ThemeElements, {Object = Content, Property = "ScrollBarImageColor3", ColorKey = "Accent"})
+            table.insert(Window.ThemeElements, {Object = Content, Property = "ScrollBarImageColor3", ColorKey = "Accent"})
             
             local Layout = Content:FindFirstChildOfClass("UIListLayout")
             Creator.AddSignal(Layout:GetPropertyChangedSignal("AbsoluteContentSize"), function()
@@ -1440,6 +1610,8 @@ registerModule(5, function()
             end)
             
             Creator.AddSignal(TabButton.MouseButton1Click, function()
+                CloseAllDropdowns()
+                
                 for _, tab in pairs(Window.Tabs) do
                     tab.Content.Visible = false
                     Creator.TweenObject(tab.Button, TweenInfo.new(0.25), {BackgroundTransparency = 1}):Play()
@@ -1501,7 +1673,9 @@ registerModule(5, function()
             
             function Tab:AddDropdown(config)
                 local success, result = pcall(function()
-                    return Elements.CreateDropdown(Content, config)
+                    local dropdown = Elements.CreateDropdown(Content, config)
+                    table.insert(Window.ActiveDropdowns, dropdown)
+                    return dropdown
                 end)
                 
                 if not success then
@@ -1537,7 +1711,7 @@ registerModule(5, function()
             
             for _, element in pairs(Window.ThemeElements) do
                 if element.Object and element.Property and element.ColorKey then
-                    element.Object[element.Property] = newTheme[element.ColorKey]
+                    Creator.TweenObject(element.Object, TweenInfo.new(0.3), {[element.Property] = newTheme[element.ColorKey]}):Play()
                 end
             end
         end
@@ -1547,10 +1721,16 @@ registerModule(5, function()
             for themeName, _ in pairs(ThemeManager.Themes) do
                 table.insert(themeList, themeName)
             end
+            table.sort(themeList)
             return themeList
         end
         
+        function Window:GetCurrentTheme()
+            return ThemeManager.CurrentTheme
+        end
+        
         function Window:Destroy()
+            CloseAllDropdowns()
             ScreenGui:Destroy()
             Creator.Disconnect()
         end
@@ -1595,8 +1775,83 @@ registerModule(5, function()
             return nil
         end
         
+        function Window:ExportConfig()
+            local success, result = pcall(function()
+                return ConfigManager:Export()
+            end)
+            
+            if success then
+                pcall(function()
+                    setclipboard(result)
+                end)
+                Window:Notify({
+                    Title = "Config Exported",
+                    Content = "Configuration copied to clipboard",
+                    Icon = Icons.GetIcon("check"),
+                    Duration = 2
+                })
+                return result
+            else
+                Window:ShowError(tostring(result))
+            end
+            
+            return nil
+        end
+        
+        function Window:ImportConfig(jsonData)
+            local success, result = pcall(function()
+                return ConfigManager:Import(jsonData)
+            end)
+            
+            if success and result then
+                Window:Notify({
+                    Title = "Config Imported",
+                    Content = "Configuration imported successfully",
+                    Icon = Icons.GetIcon("check"),
+                    Duration = 2
+                })
+            else
+                Window:ShowError("Failed to import configuration")
+            end
+            
+            return success
+        end
+        
+        function Window:ClearConfig()
+            local success = pcall(function()
+                ConfigManager:Clear()
+            end)
+            
+            if success then
+                Window:Notify({
+                    Title = "Config Cleared",
+                    Content = "All configurations cleared",
+                    Icon = Icons.GetIcon("info"),
+                    Duration = 2
+                })
+            end
+            
+            return success
+        end
+        
         function Window:SetToggleKey(key)
             toggleKey = key
+        end
+        
+        function Window:Toggle()
+            ToggleUI()
+        end
+        
+        function Window:Show()
+            if not isOpen then
+                ToggleUI()
+            end
+        end
+        
+        function Window:Hide()
+            if isOpen then
+                ToggleUI()
+            end
         end
         
         ThemeManager:OnThemeChange(function(newTheme)
