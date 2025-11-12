@@ -86,6 +86,122 @@ registerModule(2, function()
     return Creator
 end)
 
+registerModule(8, function()
+    local Translator = {}
+    Translator.CurrentLanguage = "English"
+    
+    Translator.Languages = {
+        English = {
+            Confirmation = "Confirmation",
+            AreYouSure = "Are you sure?",
+            Yes = "Yes",
+            No = "No",
+            ErrorOccurred = "Error Occurred",
+            CopyError = "Copy Error",
+            Copied = "Copied!",
+            Close = "Close",
+            UILoaded = "UI Loaded",
+            InterfaceLoaded = "Interface loaded successfully",
+            ConfigSaved = "Config Saved",
+            ConfigSavedMsg = "Configuration saved successfully",
+            ConfigLoaded = "Config Loaded",
+            ConfigLoadedMsg = "Configuration loaded successfully",
+            ConfigExported = "Config Exported",
+            ConfigExportedMsg = "Configuration copied to clipboard",
+            ConfigImported = "Config Imported",
+            ConfigImportedMsg = "Configuration imported successfully",
+            ConfigCleared = "Config Cleared",
+            ConfigClearedMsg = "All configurations cleared",
+            FailedToImport = "Failed to import configuration",
+            ConfigNotFound = "Config not found",
+            Notification = "Notification"
+        },
+        Portuguese = {
+            Confirmation = "Confirmacao",
+            AreYouSure = "Voce tem certeza?",
+            Yes = "Sim",
+            No = "Nao",
+            ErrorOccurred = "Erro Ocorrido",
+            CopyError = "Copiar Erro",
+            Copied = "Copiado!",
+            Close = "Fechar",
+            UILoaded = "UI Carregada",
+            InterfaceLoaded = "Interface carregada com sucesso",
+            ConfigSaved = "Config Salva",
+            ConfigSavedMsg = "Configuracao salva com sucesso",
+            ConfigLoaded = "Config Carregada",
+            ConfigLoadedMsg = "Configuracao carregada com sucesso",
+            ConfigExported = "Config Exportada",
+            ConfigExportedMsg = "Configuracao copiada para area de transferencia",
+            ConfigImported = "Config Importada",
+            ConfigImportedMsg = "Configuracao importada com sucesso",
+            ConfigCleared = "Config Limpa",
+            ConfigClearedMsg = "Todas as configuracoes foram limpas",
+            FailedToImport = "Falha ao importar configuracao",
+            ConfigNotFound = "Config nao encontrada",
+            Notification = "Notificacao"
+        },
+        Spanish = {
+            Confirmation = "Confirmacion",
+            AreYouSure = "Estas seguro?",
+            Yes = "Si",
+            No = "No",
+            ErrorOccurred = "Error Ocurrido",
+            CopyError = "Copiar Error",
+            Copied = "Copiado!",
+            Close = "Cerrar",
+            UILoaded = "UI Cargada",
+            InterfaceLoaded = "Interfaz cargada con exito",
+            ConfigSaved = "Config Guardada",
+            ConfigSavedMsg = "Configuracion guardada con exito",
+            ConfigLoaded = "Config Cargada",
+            ConfigLoadedMsg = "Configuracion cargada con exito",
+            ConfigExported = "Config Exportada",
+            ConfigExportedMsg = "Configuracion copiada al portapapeles",
+            ConfigImported = "Config Importada",
+            ConfigImportedMsg = "Configuracion importada con exito",
+            ConfigCleared = "Config Limpiada",
+            ConfigClearedMsg = "Todas las configuraciones fueron limpiadas",
+            FailedToImport = "Error al importar configuracion",
+            ConfigNotFound = "Config no encontrada",
+            Notification = "Notificacion"
+        }
+    }
+    
+    Translator.ActiveLanguage = Translator.Languages.English
+    Translator.LanguageCallbacks = {}
+    
+    function Translator:SetLanguage(languageName)
+        if self.Languages[languageName] then
+            self.CurrentLanguage = languageName
+            self.ActiveLanguage = self.Languages[languageName]
+            
+            for _, callback in pairs(self.LanguageCallbacks) do
+                pcall(callback, self.ActiveLanguage)
+            end
+        end
+    end
+    
+    function Translator:OnLanguageChange(callback)
+        table.insert(self.LanguageCallbacks, callback)
+    end
+    
+    function Translator:GetText(key)
+        return self.ActiveLanguage[key] or key
+    end
+    
+    function Translator:GetLanguages()
+        local langs = {}
+        for lang, _ in pairs(self.Languages) do
+            table.insert(langs, lang)
+        end
+        table.sort(langs)
+        return langs
+    end
+    
+    return Translator
+end)
+
 registerModule(3, function()
     local ThemeManager = {}
     ThemeManager.CurrentTheme = "Red"
@@ -272,6 +388,7 @@ registerModule(4, function()
     local ThemeManager = require(3)
     local Icons = require(6)
     local ConfigManager = require(7)
+    local Translator = require(8)
     
     local Elements = {}
     
@@ -291,7 +408,7 @@ registerModule(4, function()
         })
         
         local TitleLabel = Creator.New("TextLabel", {
-            Text = config.Title or "Confirmation",
+            Text = config.Title or Translator:GetText("Confirmation"),
             Size = UDim2.new(1, -40, 0, 40),
             Position = UDim2.new(0, 20, 0, 15),
             Font = Enum.Font.GothamBold,
@@ -302,7 +419,7 @@ registerModule(4, function()
         })
         
         local MessageLabel = Creator.New("TextLabel", {
-            Text = config.Message or "Are you sure?",
+            Text = config.Message or Translator:GetText("AreYouSure"),
             Size = UDim2.new(1, -40, 0, 60),
             Position = UDim2.new(0, 20, 0, 55),
             Font = Enum.Font.Gotham,
@@ -327,7 +444,7 @@ registerModule(4, function()
             Size = UDim2.new(0.48, 0, 1, 0),
             Position = UDim2.fromScale(0, 0),
             BackgroundColor3 = Theme.Accent,
-            Text = config.ConfirmText or "Yes",
+            Text = config.ConfirmText or Translator:GetText("Yes"),
             Font = Enum.Font.GothamBold,
             TextSize = 14,
             ZIndex = 103,
@@ -340,7 +457,7 @@ registerModule(4, function()
             Size = UDim2.new(0.48, 0, 1, 0),
             Position = UDim2.fromScale(0.52, 0),
             BackgroundColor3 = Theme.Surface,
-            Text = config.CancelText or "No",
+            Text = config.CancelText or Translator:GetText("No"),
             Font = Enum.Font.GothamBold,
             TextSize = 14,
             ZIndex = 103,
@@ -383,7 +500,7 @@ registerModule(4, function()
         })
         
         local TitleLabel = Creator.New("TextLabel", {
-            Text = "Error Occurred",
+            Text = Translator:GetText("ErrorOccurred"),
             Size = UDim2.new(1, -40, 0, 40),
             Position = UDim2.new(0, 20, 0, 15),
             Font = Enum.Font.GothamBold,
@@ -430,7 +547,7 @@ registerModule(4, function()
             Size = UDim2.new(0.48, 0, 1, 0),
             Position = UDim2.fromScale(0, 0),
             BackgroundColor3 = Theme.Accent,
-            Text = "Copy Error",
+            Text = Translator:GetText("CopyError"),
             Font = Enum.Font.GothamBold,
             TextSize = 14,
             ZIndex = 103,
@@ -443,7 +560,7 @@ registerModule(4, function()
             Size = UDim2.new(0.48, 0, 1, 0),
             Position = UDim2.fromScale(0.52, 0),
             BackgroundColor3 = Theme.Surface,
-            Text = "Close",
+            Text = Translator:GetText("Close"),
             Font = Enum.Font.GothamBold,
             TextSize = 14,
             ZIndex = 103,
@@ -460,10 +577,10 @@ registerModule(4, function()
             pcall(function()
                 setclipboard(errorMessage)
             end)
-            CopyButton.Text = "Copied!"
+            CopyButton.Text = Translator:GetText("Copied")
             task.wait(1)
             if CopyButton and CopyButton.Parent then
-                CopyButton.Text = "Copy Error"
+                CopyButton.Text = Translator:GetText("CopyError")
             end
         end)
         
@@ -576,10 +693,10 @@ registerModule(4, function()
             
             if config.ConfirmDialog then
                 local dialog = Elements.CreateConfirmDialog(parent.Parent.Parent.Parent, {
-                    Title = config.ConfirmDialog.Title or "Confirmation",
-                    Message = config.ConfirmDialog.Message or "Are you sure you want to activate this toggle?",
-                    ConfirmText = config.ConfirmDialog.ConfirmText or "Yes",
-                    CancelText = config.ConfirmDialog.CancelText or "No",
+                    Title = config.ConfirmDialog.Title or Translator:GetText("Confirmation"),
+                    Message = config.ConfirmDialog.Message or Translator:GetText("AreYouSure"),
+                    ConfirmText = config.ConfirmDialog.ConfirmText or Translator:GetText("Yes"),
+                    CancelText = config.ConfirmDialog.CancelText or Translator:GetText("No"),
                     OnConfirm = function()
                         toggle:SetValue(not toggle.Value)
                     end
@@ -966,14 +1083,22 @@ registerModule(4, function()
             Parent = Container
         })
         
+        local OptionsContainer = Creator.New("Frame", {
+            Size = UDim2.fromScale(1, 1),
+            BackgroundTransparency = 1,
+            Visible = false,
+            ZIndex = 200,
+            Parent = Services.CoreGui
+        })
+        
         local OptionsFrame = Creator.New("Frame", {
-            Size = UDim2.new(1, 0, 0, 0),
-            Position = UDim2.new(0, 0, 0, 55),
+            Size = UDim2.new(0, 0, 0, 0),
+            Position = UDim2.new(0, 0, 0, 0),
             BackgroundColor3 = Theme.Surface,
             ClipsDescendants = true,
             Visible = false,
-            ZIndex = 50,
-            Parent = Container
+            ZIndex = 201,
+            Parent = OptionsContainer
         }, {
             Creator.New("UICorner", {CornerRadius = UDim.new(0, 10)}),
             Creator.New("UIStroke", {Color = Theme.Border, Thickness = 1})
@@ -985,7 +1110,7 @@ registerModule(4, function()
             ScrollBarThickness = 4,
             ScrollBarImageColor3 = Theme.Accent,
             CanvasSize = UDim2.new(0, 0, 0, 0),
-            ZIndex = 51,
+            ZIndex = 202,
             Parent = OptionsFrame
         }, {
             Creator.New("UIListLayout", {Padding = UDim.new(0, 2), SortOrder = Enum.SortOrder.LayoutOrder}),
@@ -1038,7 +1163,7 @@ registerModule(4, function()
                     Font = Enum.Font.Gotham,
                     TextSize = 13,
                     TextXAlignment = Enum.TextXAlignment.Left,
-                    ZIndex = 52,
+                    ZIndex = 203,
                     Parent = OptionsScroll
                 }, {
                     Creator.New("UICorner", {CornerRadius = UDim.new(0, 6)}),
@@ -1065,6 +1190,15 @@ registerModule(4, function()
             OptionsScroll.CanvasSize = UDim2.new(0, 0, 0, OptionsLayout.AbsoluteContentSize.Y + 10)
         end
         
+        function dropdown:UpdatePosition()
+            if Container and Container.Parent then
+                local absPos = Container.AbsolutePosition
+                local absSize = Container.AbsoluteSize
+                OptionsFrame.Position = UDim2.new(0, absPos.X, 0, absPos.Y + absSize.Y + 5)
+                OptionsFrame.Size = UDim2.new(0, absSize.X, 0, OptionsFrame.Size.Y.Offset)
+            end
+        end
+        
         function dropdown:Open()
             if not dropdown.Enabled or dropdown.IsOpen then return end
             
@@ -1072,17 +1206,20 @@ registerModule(4, function()
             local optionCount = #config.Options
             local totalHeight = math.min(optionCount * 37 + 10, 200)
             
+            dropdown:UpdatePosition()
+            
+            OptionsContainer.Visible = true
             OptionsFrame.Visible = true
-            OptionsFrame.ZIndex = 50
-            OptionsScroll.ZIndex = 51
+            OptionsFrame.ZIndex = 201
+            OptionsScroll.ZIndex = 202
             
             for _, child in pairs(OptionsScroll:GetChildren()) do
                 if child:IsA("TextButton") then
-                    child.ZIndex = 52
+                    child.ZIndex = 203
                 end
             end
             
-            Creator.TweenObject(OptionsFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, totalHeight)}):Play()
+            Creator.TweenObject(OptionsFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(0, OptionsFrame.Size.X.Offset, 0, totalHeight)}):Play()
             Creator.TweenObject(ChevronIcon, TweenInfo.new(0.3), {Rotation = 180}):Play()
         end
         
@@ -1090,12 +1227,13 @@ registerModule(4, function()
             if not dropdown.IsOpen then return end
             
             dropdown.IsOpen = false
-            Creator.TweenObject(OptionsFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, 0)}):Play()
+            Creator.TweenObject(OptionsFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(0, OptionsFrame.Size.X.Offset, 0, 0)}):Play()
             Creator.TweenObject(ChevronIcon, TweenInfo.new(0.3), {Rotation = 0}):Play()
             
             task.delay(0.3, function()
                 if not dropdown.IsOpen then
                     OptionsFrame.Visible = false
+                    OptionsContainer.Visible = false
                 end
             end)
         end
@@ -1162,9 +1300,10 @@ registerModule(5, function()
     local Elements = require(4)
     local Icons = require(6)
     local ConfigManager = require(7)
+    local Translator = require(8)
     
     local Library = {}
-    Library.Version = "2.1.0"
+    Library.Version = "2.2.0"
     
     function Library:CreateWindow(config)
         local Window = {}
@@ -1459,8 +1598,8 @@ registerModule(5, function()
                 Parent = NotifyFrame
             })
             
-                        local TitleLabel = Creator.New("TextLabel", {
-                Text = notifyConfig.Title or "Notification",
+            local TitleLabel = Creator.New("TextLabel", {
+                Text = notifyConfig.Title or Translator:GetText("Notification"),
                 Position = UDim2.new(0, 60, 0, 12),
                 Size = UDim2.new(1, -70, 0, 18),
                 Font = Enum.Font.GothamBold,
@@ -1522,8 +1661,8 @@ registerModule(5, function()
         
         task.delay(0.1, function()
             Window:Notify({
-                Title = "UI Loaded",
-                Content = "Interface loaded successfully",
+                Title = Translator:GetText("UILoaded"),
+                Content = Translator:GetText("InterfaceLoaded"),
                 Icon = Icons.GetIcon("info"),
                 Duration = 3
             })
@@ -1729,6 +1868,18 @@ registerModule(5, function()
             return ThemeManager.CurrentTheme
         end
         
+        function Window:SetLanguage(language)
+            Translator:SetLanguage(language)
+        end
+        
+        function Window:GetLanguages()
+            return Translator:GetLanguages()
+        end
+        
+        function Window:GetCurrentLanguage()
+            return Translator.CurrentLanguage
+        end
+        
         function Window:Destroy()
             CloseAllDropdowns()
             ScreenGui:Destroy()
@@ -1743,8 +1894,8 @@ registerModule(5, function()
             
             if success then
                 Window:Notify({
-                    Title = "Config Saved",
-                    Content = "Configuration saved successfully",
+                    Title = Translator:GetText("ConfigSaved"),
+                    Content = Translator:GetText("ConfigSavedMsg"),
                     Icon = Icons.GetIcon("check"),
                     Duration = 2
                 })
@@ -1762,14 +1913,14 @@ registerModule(5, function()
             
             if success and result then
                 Window:Notify({
-                    Title = "Config Loaded",
-                    Content = "Configuration loaded successfully",
+                    Title = Translator:GetText("ConfigLoaded"),
+                    Content = Translator:GetText("ConfigLoadedMsg"),
                     Icon = Icons.GetIcon("check"),
                     Duration = 2
                 })
                 return result
             else
-                Window:ShowError(tostring(result or "Config not found"))
+                Window:ShowError(tostring(result or Translator:GetText("ConfigNotFound")))
             end
             
             return nil
@@ -1785,8 +1936,8 @@ registerModule(5, function()
                     setclipboard(result)
                 end)
                 Window:Notify({
-                    Title = "Config Exported",
-                    Content = "Configuration copied to clipboard",
+                    Title = Translator:GetText("ConfigExported"),
+                    Content = Translator:GetText("ConfigExportedMsg"),
                     Icon = Icons.GetIcon("check"),
                     Duration = 2
                 })
@@ -1805,13 +1956,13 @@ registerModule(5, function()
             
             if success and result then
                 Window:Notify({
-                    Title = "Config Imported",
-                    Content = "Configuration imported successfully",
+                    Title = Translator:GetText("ConfigImported"),
+                    Content = Translator:GetText("ConfigImportedMsg"),
                     Icon = Icons.GetIcon("check"),
                     Duration = 2
                 })
             else
-                Window:ShowError("Failed to import configuration")
+                Window:ShowError(Translator:GetText("FailedToImport"))
             end
             
             return success
@@ -1824,8 +1975,8 @@ registerModule(5, function()
             
             if success then
                 Window:Notify({
-                    Title = "Config Cleared",
-                    Content = "All configurations cleared",
+                    Title = Translator:GetText("ConfigCleared"),
+                    Content = Translator:GetText("ConfigClearedMsg"),
                     Icon = Icons.GetIcon("info"),
                     Duration = 2
                 })
